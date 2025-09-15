@@ -1,0 +1,679 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Polling API",
+    "version": "1.0.0",
+    "description": "REST API for Users, Polls, PollOptions and Votes based on provided Prisma models.\n"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3200",
+      "description": "Local development"
+    }
+  ],
+  "paths": {
+    "/users": {
+      "post": {
+        "summary": "Create a user",
+        "operationId": "createUser",
+        "tags": ["Users"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
+              },
+              "example": {
+                "name": "Alice",
+                "email": "alice@example.com",
+                "password": "supersecret"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      },
+      "get": {
+        "summary": "List users",
+        "operationId": "listUsers",
+        "tags": ["Users"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Array of users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{userId}": {
+      "get": {
+        "summary": "Get a user by ID",
+        "operationId": "getUser",
+        "tags": ["Users"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserWithRelations"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/login": {
+      "post": {
+        "summary": "User Login",
+        "operationId": "login",
+        "tags": ["Login"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "example": {
+                "email": "alice@example.com",
+                "password": "supersecret"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Login Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/polls": {
+      "post": {
+        "summary": "Create a poll (with options)",
+        "operationId": "createPoll",
+        "tags": ["Polls"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PollCreate"
+              },
+              "example": {
+                "question": "What's your favorite color?",
+                "userId": 1,
+                "isPublished": false,
+                "options": [
+                  {
+                    "text": "Red"
+                  },
+                  {
+                    "text": "Blue"
+                  },
+                  {
+                    "text": "Green"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Poll created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PollWithOptions"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      },
+      "get": {
+        "summary": "List polls",
+        "operationId": "listPolls",
+        "tags": ["Polls"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "published",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Filter by published state"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of polls",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PollWithOptions"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/polls/{pollId}": {
+      "get": {
+        "summary": "Get a poll by ID (includes options)",
+        "operationId": "getPoll",
+        "tags": ["Polls"],
+        "parameters": [
+          {
+            "name": "pollId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Poll with options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PollWithOptions"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "post": {
+        "summary": "Update basic poll attributes (e.g. publish)",
+        "operationId": "updatePoll",
+        "tags": ["Polls"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pollId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PollUpdate"
+              },
+              "example": {
+                "question": "New question text?",
+                "isPublished": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated poll",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PollWithOptions"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/votes": {
+      "post": {
+        "summary": "Submit a vote",
+        "operationId": "createVote",
+        "tags": ["Votes"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoteCreateFull"
+              },
+              "example": {
+                "userId": 2,
+                "pollOptionId": 10
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Vote created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Vote"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "passwordHash": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "name", "email"]
+      },
+      "UserCreate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "email", "password"]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "UserWithRelations": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/User"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "polls": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Poll"
+                }
+              },
+              "votes": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Vote"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "Poll": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "question": {
+            "type": "string"
+          },
+          "isPublished": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": ["id", "question", "userId", "createdAt", "updatedAt"]
+      },
+      "PollCreate": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "isPublished": {
+            "type": "boolean"
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PollOptionCreate"
+            }
+          }
+        },
+        "required": ["question", "userId", "options"]
+      },
+      "PollUpdate": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "isPublished": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PollWithOptions": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Poll"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "options": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/PollOptionWithVotes"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "PollOption": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "text": {
+            "type": "string"
+          },
+          "pollId": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": ["id", "text", "pollId"]
+      },
+      "PollOptionCreate": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": ["text"]
+      },
+      "PollOptionWithVotes": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PollOption"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "votesCount": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "votes": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Vote"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "Vote": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pollOptionId": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": ["id", "userId", "pollOptionId"]
+      },
+      "VoteCreate": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": ["userId"]
+      },
+      "VoteCreateFull": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pollOptionId": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": ["userId", "pollOptionId"]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["code", "message"]
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "code": 400,
+              "message": "Invalid input"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "code": 404,
+              "message": "Resource not found"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [],
+  "tags": [
+    {
+      "name": "Users",
+      "description": "Operations about users"
+    },
+    {
+      "name": "Login",
+      "description": "Login User"
+    },
+    {
+      "name": "Polls",
+      "description": "Create and retrieve polls and options"
+    },
+    {
+      "name": "Votes",
+      "description": "Submit votes"
+    }
+  ]
+}

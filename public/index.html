@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vote Component</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #f3f4f6;
+        padding: 2rem;
+      }
+      .vote-container {
+        max-width: 600px;
+        margin: 2rem auto;
+        background-color: white;
+        padding: 1.5rem;
+        border-radius: 1rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+          0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      }
+      .vote-option {
+        transition: all 0.3s ease;
+      }
+      .progress-bar {
+        transition: width 0.5s ease-in-out;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100">
+    <div id="app" class="p-8">
+      <p id="status">Websocket Status: Connecting...</p>
+      <p>API Documentation can be found at <a href="/api-docs" style="color: blue">/api-docs</a></p>
+      <div id="vote-poll" class="vote-container">
+        <h3 class="text-2xl font-bold text-gray-800 mb-4">
+          What's your favorite programming language?
+        </h3>
+        <ul class="space-y-4">
+          <li
+            class="vote-option flex items-center p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
+            data-question-id="1"
+            data-option="Python"
+          >
+            <div class="flex-grow font-medium">Python</div>
+            <div class="w-48 h-5 bg-gray-200 rounded-full overflow-hidden ml-4">
+              <div
+                class="progress-bar h-full bg-blue-500 rounded-full"
+                style="width: 0%"
+              ></div>
+            </div>
+            <span
+              class="vote-count text-gray-600 font-light ml-4 w-12 text-right"
+              >0</span
+            >
+          </li>
+          <li
+            class="vote-option flex items-center p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
+            data-question-id="1"
+            data-option="JavaScript"
+          >
+            <div class="flex-grow font-medium">JavaScript</div>
+            <div class="w-48 h-5 bg-gray-200 rounded-full overflow-hidden ml-4">
+              <div
+                class="progress-bar h-full bg-blue-500 rounded-full"
+                style="width: 0%"
+              ></div>
+            </div>
+            <span
+              class="vote-count text-gray-600 font-light ml-4 w-12 text-right"
+              >0</span
+            >
+          </li>
+          <li
+            class="vote-option flex items-center p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
+            data-question-id="1"
+            data-option="Rust"
+          >
+            <div class="flex-grow font-medium">Rust</div>
+            <div class="w-48 h-5 bg-gray-200 rounded-full overflow-hidden ml-4">
+              <div
+                class="progress-bar h-full bg-blue-500 rounded-full"
+                style="width: 0%"
+              ></div>
+            </div>
+            <span
+              class="vote-count text-gray-600 font-light ml-4 w-12 text-right"
+              >0</span
+            >
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      const socket = io("http://localhost:3200");
+
+      socket.on("connect", () => {
+        document.getElementById("status").textContent =
+          "Websocket Status: Connected ✅";
+        console.log("Connected:", socket.id);
+      });
+
+      socket.on("disconnect", () => {
+        document.getElementById("status").textContent =
+          "Websocket Status: Disconnected ❌";
+        console.log("Disconnected:", socket.id);
+      });
+
+      socket.on("poll:result", (payload) => {
+        console.log("Payload", payload);
+        const template = document.getElementById("vote-poll");
+        while (document.getElementById("vote-poll")) {
+          document.getElementById("vote-poll").remove();
+        }
+        payload.forEach((poll) => {
+          renderPoll(template, poll);
+        });
+      });
+
+      socket.on("poll:update", (payload) => {
+        console.log("Payload", payload);
+        const template = document.getElementById("vote-poll");
+        while (document.getElementById("vote-poll")) {
+          document.getElementById("vote-poll").remove();
+        }
+        payload.forEach((poll) => {
+          renderPoll(template, poll);
+        });
+      });
+
+      function renderPoll(template, poll) {
+        const newpoll = template.cloneNode(true);
+
+        newpoll.id = `vote-poll`;
+        newpoll.querySelector("h3").textContent = poll.question;
+
+        const lis = newpoll.querySelectorAll(".vote-option");
+        const totalVotes =
+          poll.options.reduce((s, o) => s + o._count.votes, 0) || 1;
+
+        poll.options.forEach((opt, i) => {
+          const li = lis[i];
+          if (!li) return; // skip if more options than template
+
+          li.dataset.questionId = poll.id;
+          li.dataset.option = opt.text;
+
+          li.querySelector(".flex-grow").textContent = opt.text;
+          li.querySelector(".vote-count").textContent = opt._count.votes;
+          li.querySelector(".progress-bar").style.width =
+            (opt._count.votes / totalVotes) * 100 + "%";
+        });
+
+        document.getElementById("app").appendChild(newpoll);
+      }
+    </script>
+  </body>
+</html>
