@@ -3,6 +3,8 @@
 A simple polling application with user authentication, poll creation, and voting functionality.
 Includes Swagger API documentation for easy exploration.
 
+![Project Screenshot](/public/image.png)
+
 ---
 
 ## Project Setup
